@@ -777,44 +777,43 @@ func (parser *arguments) parseCommandLine() (err error) {
 	args := os.Args[1:]
 	usedNext := false
 
-	if len(args) < 1 {
-		_, err = parser.parseShortOption("-Syu", "")
-		if err != nil {
-			return
+	for k, arg := range args {
+		var nextArg string
+
+		if usedNext {
+			usedNext = false
+			continue
 		}
 
-	} else {
-		for k, arg := range args {
-			var nextArg string
+		if k+1 < len(args) {
+			nextArg = args[k+1]
+		}
 
-			if usedNext {
-				usedNext = false
-				continue
-			}
+		switch {
+		case parser.existsArg("--"):
+			parser.addTarget(arg)
+		case strings.HasPrefix(arg, "--"):
+			usedNext, err = parser.parseLongOption(arg, nextArg)
+		case strings.HasPrefix(arg, "-"):
+			usedNext, err = parser.parseShortOption(arg, nextArg)
+		default:
+			parser.addTarget(arg)
+		}
 
-			if k+1 < len(args) {
-				nextArg = args[k+1]
-			}
-
-			switch {
-			case parser.existsArg("--"):
-				parser.addTarget(arg)
-			case strings.HasPrefix(arg, "--"):
-				usedNext, err = parser.parseLongOption(arg, nextArg)
-			case strings.HasPrefix(arg, "-"):
-				usedNext, err = parser.parseShortOption(arg, nextArg)
-			default:
-				parser.addTarget(arg)
-			}
-
-			if err != nil {
-				return
-			}
+		if err != nil {
+			return
 		}
 	}
 
 	if parser.op == "" {
-		parser.op = "Y"
+		if len(parser.targets) == 0 {
+			_, err = parser.parseShortOption("-Syu", "")
+			if err != nil {
+				return
+			}
+		} else {
+			parser.op = "Y"
+		}
 	}
 
 	if parser.existsArg("-") {
